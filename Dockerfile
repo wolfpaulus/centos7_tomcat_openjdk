@@ -1,12 +1,12 @@
-# CentOS Linux 7 (Core) with OpenJDK 11.0.7 and OpenSSL 1.1.1 and Tomcat 9.0.36 w/ Tomcat Native Library
+# CentOS Linux 7 (Core) with OpenJDK 11.0.9 and OpenSSL 1.1.1 and Tomcat 9.0.41 w/ Tomcat Native Library 1.2.26
 
 FROM centos:centos7
 MAINTAINER Wolf Paulus <wolf@paulus.com>
 
 ARG OPENSSL_VERSION=1.1.1
 ARG TOMCAT_MAJOR=9
-ARG TOMCAT_MINOR=9.0.36
-ARG TOMCAT_NATIVE=1.2.24
+ARG TOMCAT_MINOR=9.0.41
+ARG TOMCAT_NATIVE=1.2.26
 ARG JAVA_HOME=/usr/lib/jvm/adoptopenjdk-11-hotspot/
 
 # Install prepare infrastructure
@@ -15,7 +15,6 @@ RUN yum -y update && \
  yum -y install wget && \
  yum -y install tar && \
  yum -y install wget && \
- yum -y install perl && \
  yum -y install apr-devel && \
  yum -y install openssl-devel && \
  yum groupinstall -y "Development tools"
@@ -36,8 +35,10 @@ RUN tar zxvf openssl.tar.gz && \
     cd openssl && \
     ./config shared && \
     make depend && \
-    make install && \
-    rm -rf /tmp/*
+    make install
+	
+RUN /bin/cp -rf /usr/local/lib64/. /usr/lib64/
+RUN rm -rf /tmp/*
 
 # Install Tomcat
 ENV TOMCAT_MAJOR ${TOMCAT_MAJOR}
@@ -55,9 +56,9 @@ RUN tar zxvf /tmp/apache-tomcat.tar.gz -C /opt && \
 
 # Build and Install the native connector
 RUN curl -#L ${TOMCAT_NATIVE_LINK} -o /tmp/tomcat-native.tar.gz
-RUN mkdir -p /opt/tomcat-native && \
-    tar zxvf /tmp/tomcat-native.tar.gz -C /opt/tomcat-native --strip-components=1 && \
-    rm /tmp/*tar.gz && \
+RUN mkdir -p /opt/tomcat-native
+RUN tar zxvf /tmp/tomcat-native.tar.gz -C /opt/tomcat-native --strip-components=1
+RUN rm /tmp/*tar.gz && \
     cd /opt/tomcat-native/native && \
     ./configure \
         --libdir=/usr/lib/ \
@@ -67,7 +68,7 @@ RUN mkdir -p /opt/tomcat-native && \
         --with-ssl=yes && \
     make -j$(nproc) && \
     make install && \
-    rm -rf /opt/tomcat-native /tmp/openssl
+    rm -rf /opt/tomcat-native /tmp/*
 
 RUN set -e \
 	if `/opt/tomcat/bin/catalina.sh configtest | grep -q 'INFO: Loaded APR based Apache Tomcat Native library'` \
